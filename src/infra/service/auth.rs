@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use aws_sdk_cognitoidentityprovider as cognitio;
 use cognitio::error::SdkError;
-use cognitio::types::{AuthFlowType, ChallengeNameType};
+use cognitio::types::{AttributeType, AuthFlowType, ChallengeNameType, MessageActionType};
 use jsonwebtoken;
 use reqwest;
 
@@ -201,11 +201,76 @@ impl CognitoAuthenticationService {
 
         Ok(AuthenticationResponse::Authenticated(session))
     }
+
+    /// Internal method to create a user using AdminCreateUser API without password.
+    async fn admin_create_custom_user(
+        &self,
+        username: &str,
+        is_email: bool,
+    ) -> Result<AuthenticationUser, AuthenticationError> {
+        let attr_name = if is_email { "email" } else { "phone_number" };
+        let verified_attr_name = if is_email {
+            "email_verified"
+        } else {
+            "phone_number_verified"
+        };
+
+        let user_attr = AttributeType::builder()
+            .name(attr_name)
+            .value(username)
+            .build()
+            .unwrap();
+
+        let verified_attr = AttributeType::builder()
+            .name(verified_attr_name)
+            .value("true")
+            .build()
+            .unwrap();
+
+        let output = self
+            .client
+            .admin_create_user()
+            .user_pool_id(&self.pool_id)
+            .username(username)
+            .user_attributes(user_attr)
+            .user_attributes(verified_attr)
+            .message_action(MessageActionType::Suppress)
+            .send()
+            .await
+            .map_err(|e| self.map_error(e))?;
+
+        let user_data = output.user.ok_or(AuthenticationError::Unexpected(
+            "User creation failed".into(),
+        ))?;
+
+        Ok(AuthenticationUser::new(
+            user_data.username.unwrap_or_default(),
+            if is_email {
+                username.to_string()
+            } else {
+                "".to_string()
+            },
+            if !is_email {
+                username.to_string()
+            } else {
+                "".to_string()
+            },
+            "AdminCreate".into(),
+            "User".into(),
+        ))
+    }
 }
 
 #[async_trait]
 impl AuthenticationService for CognitoAuthenticationService {
-    async fn sign_out(&self) -> Result<(), AuthenticationError> {
+    async fn sign_out(&self, session: &AuthenticationSession) -> Result<(), AuthenticationError> {
+        // Sign out of all sessions regardless of device.
+        self.client
+            .global_sign_out()
+            .access_token(session.access_token())
+            .send()
+            .await
+            .map_err(|e| self.map_error(e))?;
         Ok(())
     }
 
@@ -254,26 +319,46 @@ impl AuthenticationService for CognitoAuthenticationService {
     ) -> Result<AuthenticationUser, AuthenticationError> {
         match method {
             AuthenticationMethod::Email { email, .. } => {
-                self.client
-                    .sign_up()
-                    .client_id(&self.client_id)
-                    .username(email)
-                    .password("TempPassword123!".to_string())
-                    .send()
-                    .await
-                    .map_err(|e| self.map_error(e))?;
-
-                Ok(AuthenticationUser::new(
-                    "pending".into(),
-                    email.clone(),
-                    "".into(),
-                    "Email".into(),
-                    "User".into(),
-                ))
+                self.admin_create_custom_user(email, true).await
+            }
+            AuthenticationMethod::PhoneNumber { phone_number, .. } => {
+                self.admin_create_custom_user(phone_number, false).await
             }
             _ => Err(AuthenticationError::Unexpected(
-                "Only Email sign_up is currently supported".into(),
+                "Method not supported for sign_up".into(),
             )),
         }
+    }
+
+    async fn refresh_token(
+        &self,
+        session: &AuthenticationSession,
+    ) -> Result<AuthenticationSession, AuthenticationError> {
+        let refresh_token_opt = session.refresh_token();
+        let refresh_token = refresh_token_opt
+            .as_ref()
+            .ok_or(AuthenticationError::InvalidCredential)?;
+
+        let output = self
+            .client
+            .initiate_auth()
+            .auth_flow(AuthFlowType::RefreshTokenAuth)
+            .client_id(&self.client_id)
+            .auth_parameters("REFRESH_TOKEN", refresh_token)
+            .send()
+            .await
+            .map_err(|e| self.map_error(e))?;
+
+        let auth_result = output
+            .authentication_result()
+            .ok_or(AuthenticationError::InvalidCredential)?;
+
+        Ok(AuthenticationSession::new(
+            session.user(),
+            auth_result.access_token().unwrap_or_default().to_string(),
+            auth_result.id_token().unwrap_or_default().to_string(),
+            Some(auth_result.refresh_token().unwrap_or_default().to_string()),
+            auth_result.expires_in(),
+        ))
     }
 }

@@ -1,12 +1,13 @@
+use chrono;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub struct AuthenticationSession {
-    pub user: AuthenticationUser,
-    pub access_token: String,
-    pub id_token: String,
-    pub refresh_token: Option<String>,
-    pub expires_in: i32,
+    user: AuthenticationUser,
+    access_token: String,
+    id_token: String,
+    refresh_token: Option<String>,
+    expired_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl AuthenticationSession {
@@ -17,13 +18,30 @@ impl AuthenticationSession {
         refresh_token: Option<String>,
         expires_in: i32,
     ) -> Self {
+        let expired_at = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
         Self {
             user,
             access_token,
             id_token,
             refresh_token,
-            expires_in,
+            expired_at,
         }
+    }
+
+    pub fn user(&self) -> AuthenticationUser {
+        self.user.clone()
+    }
+
+    pub fn access_token(&self) -> String {
+        self.access_token.clone()
+    }
+
+    pub fn refresh_token(&self) -> Option<String> {
+        if let Some(refresh_token) = self.refresh_token.clone() {
+            return Some(refresh_token.clone());
+        }
+
+        None
     }
 }
 

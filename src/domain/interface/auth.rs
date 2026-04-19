@@ -2,6 +2,7 @@ use async_trait::async_trait;
 
 use crate::domain::entities::auth::{AuthenticationSession, AuthenticationUser};
 
+#[derive(Debug)]
 pub enum AuthenticationError {
     InvalidCredential,
     UserNotFound,
@@ -9,12 +10,12 @@ pub enum AuthenticationError {
     Unexpected(String),
 }
 
+#[derive(Debug)]
 pub enum AuthenticationResponse {
     Authenticated(AuthenticationSession),
     OtpSent { session: String },
 }
 
-#[derive(Debug)]
 pub enum AuthenticationMethod {
     Email {
         email: String,
@@ -36,7 +37,7 @@ pub enum AuthenticationMethod {
 
 #[async_trait]
 pub trait AuthenticationService {
-    async fn sign_out(&self) -> Result<(), AuthenticationError>;
+    async fn sign_out(&self, session: &AuthenticationSession) -> Result<(), AuthenticationError>;
     async fn sign_in(
         &self,
         method: &AuthenticationMethod,
@@ -45,4 +46,8 @@ pub trait AuthenticationService {
         &self,
         method: &AuthenticationMethod,
     ) -> Result<AuthenticationUser, AuthenticationError>;
+    async fn refresh_token(
+        &self,
+        session: &AuthenticationSession,
+    ) -> Result<AuthenticationSession, AuthenticationError>;
 }
