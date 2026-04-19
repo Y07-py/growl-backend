@@ -58,5 +58,6 @@ Backups.backupdb
 MobileBackups.trash
 tmbootpicker.efi
 
-# Folder
+# Folder and file
 target
+.env
