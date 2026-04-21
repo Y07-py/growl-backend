@@ -13,6 +13,22 @@ pub struct AppState {
     pub otp_service_sns: Arc<dyn auth_interface::OTPService + Send + Sync>, // For SMS
 }
 
+impl AppState {
+    pub fn new(
+        auth_service: Arc<dyn auth_interface::AuthenticationService + Send + Sync>,
+        auth_repo: Arc<dyn repository::AuthenticationRepository + Send + Sync>,
+        otp_service_ses: Arc<dyn auth_interface::OTPService + Send + Sync>,
+        otp_service_sns: Arc<dyn auth_interface::OTPService + Send + Sync>,
+    ) -> Self {
+        Self {
+            auth_service,
+            auth_repo,
+            otp_service_ses,
+            otp_service_sns,
+        }
+    }
+}
+
 /// HTTP handler for guest sign-up requests.
 /// It identifies the auth method (Email or Phone), selects the appropriate OTP service,
 /// and orchestrates the sign-up flow using the application layer.

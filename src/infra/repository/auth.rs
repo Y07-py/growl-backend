@@ -13,7 +13,7 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "
-            INSERT INTO authentication_users (sud_id, email, phone_number, authentication_method, role) \
+            INSERT INTO authentication_users (sub_id, email, phone_number, authentication_method, role) \
             VALUES ($1, $2, $3, $4, $5) \
             ON CONFLICT (sub_id) DO NOTHING \
             ",

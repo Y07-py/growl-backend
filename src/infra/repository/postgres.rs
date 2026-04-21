@@ -1,7 +1,6 @@
 use slog;
 use sqlx;
 use std::{env, panic, sync::Arc};
-use tokio::sync::RwLock;
 
 #[derive(Debug, Clone)]
 pub struct PostgresHandler {
@@ -10,7 +9,7 @@ pub struct PostgresHandler {
 }
 
 impl PostgresHandler {
-    pub async fn new(max_connection: u32, root_logger: &slog::Logger) -> Arc<RwLock<Self>> {
+    pub async fn new(max_connection: u32, root_logger: &slog::Logger) -> Arc<Self> {
         // Build sub logger for `PostgresHandler`
         let sub_logger = root_logger.new(slog::o!("infra" => "repository"));
 
@@ -23,7 +22,7 @@ impl PostgresHandler {
         {
             Ok(pool) => {
                 slog::info!(sub_logger, "Successfully connected to the database."; "endpoint" => &db_endpoint);
-                Arc::new(RwLock::new(Self { pool, sub_logger }))
+                Arc::new(Self { pool, sub_logger })
             }
             Err(e) => {
                 slog::error!(sub_logger, "Failed to connect to the database."; "endpoint" => &db_endpoint, "error" => ?e);
