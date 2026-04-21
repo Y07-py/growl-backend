@@ -52,7 +52,7 @@ pub enum AuthenticationMethod {
 }
 
 #[async_trait]
-pub trait AuthenticationService {
+pub trait AuthenticationService: Send + Sync {
     async fn sign_out(&self, session: &AuthenticationSession) -> Result<(), AuthenticationError>;
     async fn sign_in(
         &self,
@@ -69,7 +69,7 @@ pub trait AuthenticationService {
 }
 
 #[async_trait]
-pub trait OTPService {
+pub trait OTPService: Send + Sync {
     async fn request_otp(&self, user_name: &str) -> Result<(), AuthenticationError>;
     fn validation_user_name(&self, user_name: &str) -> Result<(), AuthenticationError>;
 }

@@ -3,11 +3,11 @@ use crate::domain::interface::{auth, repository};
 
 ///
 pub async fn sign_up(
-    auth_service: &dyn auth::AuthenticationService,
-    repo: &dyn repository::AuthenticationRepository,
-    otp_service: &dyn auth::OTPService,
+    auth_service: &(dyn auth::AuthenticationService + Send + Sync),
+    repo: &(dyn repository::AuthenticationRepository + Send + Sync),
+    otp_service: &(dyn auth::OTPService + Send + Sync),
     method: &auth::AuthenticationMethod,
-) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error>> {
+) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error + Send + Sync>> {
     // 1. sign up with guest user.
     let guest = auth_service.sign_up(method).await?;
 

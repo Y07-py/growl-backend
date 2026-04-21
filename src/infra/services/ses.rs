@@ -99,7 +99,7 @@ impl auth::OTPService for SESService {
         // 2. Space check
         if user_name.contains(' ') {
             return Err(auth::AuthenticationError::InvalidFormat(
-                "Email cannot spaces".to_string(),
+                "Email cannot contain spaces".to_string(),
             ));
         }
 
@@ -107,7 +107,7 @@ impl auth::OTPService for SESService {
         let parts: Vec<&str> = user_name.split('@').collect();
         if parts.len() != 2 {
             return Err(auth::AuthenticationError::InvalidFormat(
-                "Email must contain one '@'".to_string(),
+                "Email must contain exactly one '@'".to_string(),
             ));
         }
 

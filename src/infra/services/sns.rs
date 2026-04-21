@@ -65,7 +65,7 @@ impl auth::OTPService for SNSService {
         }
 
         // 2. Must start with '+'
-        if user_name.starts_with('+') {
+        if !user_name.starts_with('+') {
             return Err(auth::AuthenticationError::InvalidFormat(
                 "Phone number must start with '+' (E.164 format)".to_string(),
             ));

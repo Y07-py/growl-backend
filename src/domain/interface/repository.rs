@@ -4,7 +4,7 @@ use sqlx;
 use crate::domain::entities;
 
 #[async_trait]
-pub trait AuthenticationRepository {
+pub trait AuthenticationRepository: Send + Sync {
     async fn insert_guest_user(
         &self,
         guset: &entities::auth::AuthenticationUser,

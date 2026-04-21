@@ -117,4 +117,8 @@ impl AuthenticationChallenge {
             authentication_method,
         }
     }
+
+    pub fn session_id(&self) -> String {
+        self.session_id.clone()
+    }
 }
