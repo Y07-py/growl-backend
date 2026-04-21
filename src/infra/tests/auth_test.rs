@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 
 use crate::domain::interface::auth::{AuthenticationMethod, AuthenticationService};
-use crate::infra::service::auth::CognitoAuthenticationService;
+use crate::infra::services::auth::CognitoAuthenticationService;
 
 async fn setup_service() -> Option<CognitoAuthenticationService> {
     dotenv().ok();

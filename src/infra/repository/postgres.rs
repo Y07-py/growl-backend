@@ -1,11 +1,7 @@
-use async_trait::async_trait;
 use slog;
 use sqlx;
 use std::{env, panic, sync::Arc};
 use tokio::sync::RwLock;
-
-use crate::domain::entities;
-use crate::domain::interface::repository;
 
 #[derive(Debug, Clone)]
 pub struct PostgresHandler {
@@ -35,21 +31,12 @@ impl PostgresHandler {
             }
         }
     }
-}
 
-#[async_trait]
-impl repository::AuthenticationRepository for PostgresHandler {
-    async fn upsert_guest_user(
-        &self,
-        guest: &entities::auth::AuthenticationUser,
-    ) -> Result<(), sqlx::Error> {
-        Ok(())
+    pub fn get_pool(&self) -> &sqlx::Pool<sqlx::Postgres> {
+        &self.pool
     }
 
-    async fn upsert_authenticated_user(
-        &self,
-        user: &entities::auth::AuthenticationUser,
-    ) -> Result<(), sqlx::Error> {
-        Ok(())
+    pub fn get_sub_logger(&self) -> &slog::Logger {
+        &self.sub_logger
     }
 }

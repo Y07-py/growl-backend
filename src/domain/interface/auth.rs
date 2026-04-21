@@ -64,9 +64,9 @@ pub trait AuthenticationService {
         &self,
         session: &AuthenticationSession,
     ) -> Result<AuthenticationSession, AuthenticationError>;
-    async fn request_otp_with_email(&self, email: &str) -> Result<(), AuthenticationError>;
-    async fn request_otp_with_phonenumber(
-        &self,
-        phone_number: &str,
-    ) -> Result<(), AuthenticationError>;
+}
+
+#[async_trait]
+pub trait OTPService {
+    async fn request_otp(&self, user_name: &str) -> Result<(), AuthenticationError>;
 }

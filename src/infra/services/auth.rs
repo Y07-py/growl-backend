@@ -370,17 +370,4 @@ impl AuthenticationService for CognitoAuthenticationService {
             auth_result.expires_in(),
         ))
     }
-
-    /// Use the session as authentication credentials and send a request to generate an OTP for the email via SMS,
-    async fn request_otp_with_email(&self, email: &str) -> Result<(), AuthenticationError> {
-        Ok(())
-    }
-
-    /// Use the session as authentication credentials and send a request to generate an OTP for the phone number via SNS.
-    async fn request_otp_with_phonenumber(
-        &self,
-        phone_number: &str,
-    ) -> Result<(), AuthenticationError> {
-        Ok(())
-    }
 }

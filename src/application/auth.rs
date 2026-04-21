@@ -4,13 +4,14 @@ use crate::domain::interface::{auth, repository};
 pub async fn sign_up(
     auth_service: &dyn auth::AuthenticationService,
     repo: &dyn repository::AuthenticationRepository,
+    otp_service: &dyn auth::OTPService,
     method: &auth::AuthenticationMethod,
 ) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error>> {
     // 1. sign up with guest user.
     let guest = auth_service.sign_up(method).await?;
 
     // 2. insert guest user in DB, if not exist.
-    repo.upsert_guest_user(&guest).await?;
+    repo.insert_guest_user(&guest).await?;
 
     // 3.Request transimission OTP based on the method.
     let session_id: Option<String> = match method {
@@ -23,7 +24,7 @@ pub async fn sign_up(
             };
 
             // Request otp to aws sms.
-            auth_service.request_otp_with_email(email).await?;
+            otp_service.request_otp(email).await?;
 
             session_id
         }
@@ -36,9 +37,7 @@ pub async fn sign_up(
             };
 
             // Request otp to aws sns.
-            auth_service
-                .request_otp_with_phonenumber(phone_number)
-                .await?;
+            otp_service.request_otp(phone_number).await?;
 
             session_id
         }
