@@ -5,6 +5,7 @@ use crate::domain::entities::auth::{AuthenticationSession, AuthenticationUser};
 
 #[derive(Debug)]
 pub enum AuthenticationError {
+    InvalidFormat(String),
     InvalidCredential,
     UserNotFound,
     NetWorkError,
@@ -14,6 +15,7 @@ pub enum AuthenticationError {
 impl fmt::Display for AuthenticationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            AuthenticationError::InvalidFormat(msg) => write!(f, "Invalid format: {}", msg),
             AuthenticationError::InvalidCredential => write!(f, "Invalid credential"),
             AuthenticationError::UserNotFound => write!(f, "User not found"),
             AuthenticationError::NetWorkError => write!(f, "Network error"),
@@ -69,4 +71,5 @@ pub trait AuthenticationService {
 #[async_trait]
 pub trait OTPService {
     async fn request_otp(&self, user_name: &str) -> Result<(), AuthenticationError>;
+    fn validation_user_name(&self, user_name: &str) -> Result<(), AuthenticationError>;
 }

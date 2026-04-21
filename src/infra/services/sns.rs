@@ -55,4 +55,29 @@ impl auth::OTPService for SNSService {
 
         Ok(())
     }
+
+    fn validation_user_name(&self, user_name: &str) -> Result<(), auth::AuthenticationError> {
+        // 1. Minimum length check
+        if user_name.len() < 5 || user_name.len() > 16 {
+            return Err(auth::AuthenticationError::InvalidFormat(
+                "Phone number length is invalid".to_string(),
+            ));
+        }
+
+        // 2. Must start with '+'
+        if user_name.starts_with('+') {
+            return Err(auth::AuthenticationError::InvalidFormat(
+                "Phone number must start with '+' (E.164 format)".to_string(),
+            ));
+        }
+
+        // 3. Rest must be digits.
+        if !user_name[1..].chars().all(|c| c.is_ascii_digit()) {
+            return Err(auth::AuthenticationError::InvalidFormat(
+                "Phone number must contain only digits after '+'".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
 }

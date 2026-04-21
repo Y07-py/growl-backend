@@ -1,3 +1,3 @@
 pub mod auth;
-pub mod sms;
+pub mod ses;
 pub mod sns;

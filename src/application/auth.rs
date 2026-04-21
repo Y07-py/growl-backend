@@ -1,6 +1,7 @@
 use crate::domain::entities;
 use crate::domain::interface::{auth, repository};
 
+///
 pub async fn sign_up(
     auth_service: &dyn auth::AuthenticationService,
     repo: &dyn repository::AuthenticationRepository,
@@ -16,6 +17,9 @@ pub async fn sign_up(
     // 3.Request transimission OTP based on the method.
     let session_id: Option<String> = match method {
         auth::AuthenticationMethod::Email { email, .. } => {
+            // Validation email format.
+            otp_service.validation_user_name(email)?;
+
             // Generate session id via sign in.
             let response = auth_service.sign_in(method).await?;
             let session_id: Option<String> = match response {
@@ -29,6 +33,9 @@ pub async fn sign_up(
             session_id
         }
         auth::AuthenticationMethod::PhoneNumber { phone_number, .. } => {
+            // Validation phone number format.
+            otp_service.validation_user_name(phone_number)?;
+
             // Generate session id via sign in.
             let response = auth_service.sign_in(method).await?;
             let session_id: Option<String> = match response {
