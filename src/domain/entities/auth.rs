@@ -1,6 +1,8 @@
 use chrono;
 use serde::{Deserialize, Serialize};
 
+use crate::domain::interface;
+
 #[derive(Debug, Clone)]
 pub struct AuthenticationSession {
     user: AuthenticationUser,
@@ -85,5 +87,34 @@ pub struct AuthenticationClaims {
 impl AuthenticationClaims {
     pub fn sub_id(&self) -> String {
         self.sub.clone()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthenticationChallenge {
+    session_id: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+    authentication_method: String,
+}
+
+impl AuthenticationChallenge {
+    pub fn new(session_id: &str, method: &interface::auth::AuthenticationMethod) -> Self {
+        let authentication_method: String = match method {
+            interface::auth::AuthenticationMethod::Email { .. } => "email".to_string(),
+            &interface::auth::AuthenticationMethod::PhoneNumber { .. } => {
+                "phone_number".to_string()
+            }
+            _ => {
+                panic!(
+                    "AuthenticationChallenge does not accept attributes other than the email or phone number methods"
+                )
+            }
+        };
+
+        Self {
+            session_id: session_id.to_string(),
+            created_at: chrono::Utc::now(),
+            authentication_method,
+        }
     }
 }

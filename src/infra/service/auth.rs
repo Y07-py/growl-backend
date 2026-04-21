@@ -151,7 +151,7 @@ impl CognitoAuthenticationService {
         username: &str,
         code: &str,
         auth_method: &str,
-        session: Option<&str>,
+        session_id: Option<&str>,
     ) -> Result<AuthenticationResponse, AuthenticationError> {
         let output = self
             .client
@@ -160,7 +160,7 @@ impl CognitoAuthenticationService {
             .client_id(&self.client_id)
             .challenge_responses("USERNAME", username)
             .challenge_responses("ANSWER", code)
-            .set_session(session.map(|s| s.to_string()))
+            .set_session(session_id.map(|s| s.to_string()))
             .send()
             .await
             .map_err(|e| self.map_error(e))?;
@@ -243,8 +243,17 @@ impl CognitoAuthenticationService {
             "User creation failed".into(),
         ))?;
 
+        // Extract `sub` attributes from user_data
+        let sub_id = user_data
+            .attributes()
+            .iter()
+            .find(|attr| attr.name() == "sub")
+            .and_then(|attr| attr.value())
+            .unwrap_or_default()
+            .to_string();
+
         Ok(AuthenticationUser::new(
-            user_data.username.unwrap_or_default(),
+            sub_id,
             if is_email {
                 username.to_string()
             } else {
@@ -256,7 +265,7 @@ impl CognitoAuthenticationService {
                 "".to_string()
             },
             "AdminCreate".into(),
-            "User".into(),
+            "guest".into(),
         ))
     }
 }
@@ -282,18 +291,18 @@ impl AuthenticationService for CognitoAuthenticationService {
             AuthenticationMethod::Email {
                 email,
                 otp,
-                session,
+                session_id,
             } => match otp {
                 None => self.initiate_custom_auth(email).await,
                 Some(code) => {
-                    self.respond_to_custom_challenge(email, code, "email", session.as_deref())
+                    self.respond_to_custom_challenge(email, code, "email", session_id.as_deref())
                         .await
                 }
             },
             AuthenticationMethod::PhoneNumber {
                 phone_number,
                 otp,
-                session,
+                session_id,
             } => match otp {
                 None => self.initiate_custom_auth(phone_number).await,
                 Some(code) => {
@@ -301,7 +310,7 @@ impl AuthenticationService for CognitoAuthenticationService {
                         phone_number,
                         code,
                         "phone_number",
-                        session.as_deref(),
+                        session_id.as_deref(),
                     )
                     .await
                 }
@@ -360,5 +369,18 @@ impl AuthenticationService for CognitoAuthenticationService {
             Some(auth_result.refresh_token().unwrap_or_default().to_string()),
             auth_result.expires_in(),
         ))
+    }
+
+    /// Use the session as authentication credentials and send a request to generate an OTP for the email via SMS,
+    async fn request_otp_with_email(&self, email: &str) -> Result<(), AuthenticationError> {
+        Ok(())
+    }
+
+    /// Use the session as authentication credentials and send a request to generate an OTP for the phone number via SNS.
+    async fn request_otp_with_phonenumber(
+        &self,
+        phone_number: &str,
+    ) -> Result<(), AuthenticationError> {
+        Ok(())
     }
 }

@@ -39,7 +39,7 @@ async fn test_sign_in_with_invalid_email_should_fail() {
     let method = AuthenticationMethod::Email {
         email: "non-existent-user@example.com".to_string(),
         otp: None,
-        session: None,
+        session_id: None,
     };
 
     // Attempt sign_in (initiation)
