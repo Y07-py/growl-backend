@@ -17,7 +17,7 @@ dotenv = "0.15"
 reqwest = { version = "0.13", features = ["json"] }
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-slog = { version = "2.8.2", features = ["max_level_trace", "release_max_level_warn"] }
+slog = { version = "2.8.2", features = ["max_level_trace", "release_max_level_info"] }
 sqlx = { version = "0.8", features = [ "runtime-tokio", "tls-rustls-aws-lc-rs", "postgres", "macros", "uuid", "time", "tls-rustls", "chrono", "json" ] }
 slog-term = "2.9.2"
 slog-async = "2.8.0"

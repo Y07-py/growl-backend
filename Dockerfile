@@ -1,18 +1,18 @@
 # Step 1: Extraction of dependencies
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS planner
+FROM lukemathwalker/cargo-chef:latest-rust-1.95-bookworm AS planner
 WORKDIR /app
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 
 # Step 2: Building dependencies
-FROM lukemathwalker/cargo-chef:latest-rust-1.85-bookworm AS cacher
+FROM lukemathwalker/cargo-chef:latest-rust-1.95-bookworm AS cacher
 WORKDIR /app
 COPY --from=planner /app/recipe.json recipe.json
 # Building cache from dependencies
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # Step 3: Building app
-FROM rust:1.85-bookworm AS builder
+FROM rust:1.95-bookworm AS builder
 WORKDIR /app
 COPY . .
 # Copy cached dependencies.
