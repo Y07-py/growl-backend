@@ -1,0 +1,45 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_ENDPOINT=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-growl}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_COGNITIO_USER_POOL_ID=${AWS_COGNITIO_USER_POOL_ID}
+      - AWS_COGNITIO_CLIENT_ID=${AWS_COGNITIO_CLIENT_ID}
+      - AWS_SNS_TOPIC_ARN=${AWS_SNS_TOPIC_ARN}
+      - APP_NAME=${APP_NAME}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - growl-network
+
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB:-growl}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-growl}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - growl-network
+
+networks:
+  growl-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

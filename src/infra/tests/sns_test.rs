@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use crate::domain::interface::auth::OTPService;
 use crate::infra::services::sns::SNSService;
 use slog::Logger;
 
-async fn setup_sns_service() -> SNSService {
+async fn setup_sns_service() -> Arc<SNSService> {
     let drain = slog::Discard;
     let logger = Logger::root(drain, slog::o!());
     SNSService::new(&logger).await

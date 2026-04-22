@@ -1,10 +1,15 @@
+use std::sync::Arc;
+
 use dotenv::dotenv;
 
 use crate::domain::interface::auth::{AuthenticationMethod, AuthenticationService};
 use crate::infra::services::auth::CognitoAuthenticationService;
 
-async fn setup_service() -> Option<CognitoAuthenticationService> {
+async fn setup_service() -> Option<Arc<CognitoAuthenticationService>> {
     dotenv().ok();
+
+    let drain = slog::Discard;
+    let logger = slog::Logger::root(drain, slog::o!());
 
     // Required environment variables for Cognito
     if std::env::var("AWS_COGNITIO_CLIENT_ID").is_err()
@@ -14,7 +19,7 @@ async fn setup_service() -> Option<CognitoAuthenticationService> {
         return None;
     }
 
-    Some(CognitoAuthenticationService::new().await)
+    Some(CognitoAuthenticationService::new(&logger).await)
 }
 
 #[tokio::test]

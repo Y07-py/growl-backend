@@ -24,9 +24,9 @@ async fn main() -> std::io::Result<()> {
     slog::info!(root_logger, "Growl Backend starting up...");
 
     // 2. Initialize Infrastructure Services (DI)
-    let auth_service = Arc::new(CognitoAuthenticationService::new().await);
-    let ses_service = Arc::new(SESService::new(&root_logger).await);
-    let sns_service = Arc::new(SNSService::new(&root_logger).await);
+    let auth_service = CognitoAuthenticationService::new(&root_logger).await;
+    let ses_service = SESService::new(&root_logger).await;
+    let sns_service = SNSService::new(&root_logger).await;
 
     // 3. Initialize Repositories (Postgres)
     // Connecting to the database endpoint defined in environment variables.

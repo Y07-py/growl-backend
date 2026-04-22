@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use aws_config;
 use aws_sdk_sns;
@@ -11,13 +13,15 @@ pub struct SNSService {
 }
 
 impl SNSService {
-    pub async fn new(root_logger: &slog::Logger) -> Self {
+    pub async fn new(root_logger: &slog::Logger) -> Arc<Self> {
         let sub_logger = root_logger.new(slog::o!("infra" => "sns"));
 
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_sns::Client::new(&config);
 
-        Self { client, sub_logger }
+        slog::info!(sub_logger, "Initialize SNS Service.");
+
+        Arc::new(Self { client, sub_logger })
     }
 }
 

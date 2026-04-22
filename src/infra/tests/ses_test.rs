@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use crate::domain::interface::auth::OTPService;
 use crate::infra::services::ses::SESService;
 use slog::Logger;
 
-async fn setup_ses_service() -> SESService {
+async fn setup_ses_service() -> Arc<SESService> {
     let drain = slog::Discard;
     let logger = Logger::root(drain, slog::o!());
     SESService::new(&logger).await

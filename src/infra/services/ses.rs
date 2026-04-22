@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use aws_config;
 use aws_sdk_ses;
@@ -11,13 +13,15 @@ pub struct SESService {
 }
 
 impl SESService {
-    pub async fn new(root_logger: &slog::Logger) -> Self {
+    pub async fn new(root_logger: &slog::Logger) -> Arc<Self> {
         let config = aws_config::load_from_env().await;
         let client = aws_sdk_ses::Client::new(&config);
 
         let sub_logger = root_logger.new(slog::o!("infra" => "ses"));
 
-        Self { client, sub_logger }
+        slog::info!(sub_logger, "Initialize SES Service.");
+
+        Arc::new(Self { client, sub_logger })
     }
 }
 

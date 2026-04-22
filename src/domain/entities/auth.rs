@@ -45,6 +45,14 @@ impl AuthenticationSession {
 
         None
     }
+
+    pub fn id_token(&self) -> String {
+        self.id_token.clone()
+    }
+
+    pub fn expired_at(&self) -> chrono::DateTime<chrono::Utc> {
+        self.expired_at.clone()
+    }
 }
 
 #[derive(Debug, Clone)]

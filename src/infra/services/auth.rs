@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use aws_sdk_cognitoidentityprovider as cognitio;
 use cognitio::error::SdkError;
@@ -18,10 +20,13 @@ pub struct CognitoAuthenticationService {
     client_id: String,
     region: String,
     pool_id: String,
+    logger: slog::Logger,
 }
 
 impl CognitoAuthenticationService {
-    pub async fn new() -> Self {
+    pub async fn new(root_logger: &slog::Logger) -> Arc<Self> {
+        let sub_logger = root_logger.new(slog::o!("service" => "auth"));
+
         let config = aws_config::load_from_env().await;
         let client = cognitio::Client::new(&config);
 
@@ -31,12 +36,19 @@ impl CognitoAuthenticationService {
         let pool_id = std::env::var("AWS_COGNITIO_USER_POOL_ID")
             .expect("AWS_COGNITIO_USER_POOL_ID must be set");
 
-        Self {
+        slog::info!(sub_logger, "Initialize Cognitio Authentication Service.");
+
+        Arc::new(Self {
             client,
             client_id,
             region,
             pool_id,
-        }
+            logger: sub_logger,
+        })
+    }
+
+    pub fn logger(&self) -> &slog::Logger {
+        &self.logger
     }
 
     fn map_error<E>(&self, err: SdkError<E>) -> AuthenticationError
