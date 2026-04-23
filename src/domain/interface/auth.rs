@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt;
 
-use crate::domain::entities::auth::{AuthenticationSession, AuthenticationUser};
+use crate::domain::entities::auth::{AuthenticationSession, UserIdentity};
 
 #[derive(Debug)]
 pub enum AuthenticationError {
@@ -61,7 +61,7 @@ pub trait AuthenticationService: Send + Sync {
     async fn sign_up(
         &self,
         method: &AuthenticationMethod,
-    ) -> Result<AuthenticationUser, AuthenticationError>;
+    ) -> Result<UserIdentity, AuthenticationError>;
     async fn refresh_token(
         &self,
         session: &AuthenticationSession,

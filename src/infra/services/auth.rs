@@ -7,9 +7,7 @@ use cognitio::types::{AttributeType, AuthFlowType, ChallengeNameType, MessageAct
 use jsonwebtoken;
 use reqwest;
 
-use crate::domain::entities::auth::{
-    AuthenticationClaims, AuthenticationSession, AuthenticationUser,
-};
+use crate::domain::entities::auth::{AuthenticationClaims, AuthenticationSession, UserIdentity};
 use crate::domain::interface::auth::{
     AuthenticationError, AuthenticationMethod, AuthenticationResponse, AuthenticationService,
 };
@@ -187,7 +185,7 @@ impl CognitoAuthenticationService {
             .ok_or(AuthenticationError::InvalidCredential)?;
         let sub_id = self.extract_sub_id_from_token(&id_token).await?;
 
-        let user = AuthenticationUser::new(
+        let user = UserIdentity::new(
             sub_id,
             if auth_method == "email" {
                 username.to_string()
@@ -219,7 +217,7 @@ impl CognitoAuthenticationService {
         &self,
         username: &str,
         is_email: bool,
-    ) -> Result<AuthenticationUser, AuthenticationError> {
+    ) -> Result<UserIdentity, AuthenticationError> {
         let attr_name = if is_email { "email" } else { "phone_number" };
         let verified_attr_name = if is_email {
             "email_verified"
@@ -264,7 +262,7 @@ impl CognitoAuthenticationService {
             .unwrap_or_default()
             .to_string();
 
-        Ok(AuthenticationUser::new(
+        Ok(UserIdentity::new(
             sub_id,
             if is_email {
                 username.to_string()
@@ -337,7 +335,7 @@ impl AuthenticationService for CognitoAuthenticationService {
     async fn sign_up(
         &self,
         method: &AuthenticationMethod,
-    ) -> Result<AuthenticationUser, AuthenticationError> {
+    ) -> Result<UserIdentity, AuthenticationError> {
         match method {
             AuthenticationMethod::Email { email, .. } => {
                 self.admin_create_custom_user(email, true).await
@@ -375,7 +373,7 @@ impl AuthenticationService for CognitoAuthenticationService {
             .ok_or(AuthenticationError::InvalidCredential)?;
 
         Ok(AuthenticationSession::new(
-            session.user(),
+            session.identity(),
             auth_result.access_token().unwrap_or_default().to_string(),
             auth_result.id_token().unwrap_or_default().to_string(),
             Some(auth_result.refresh_token().unwrap_or_default().to_string()),

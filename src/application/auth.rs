@@ -58,3 +58,16 @@ pub async fn sign_up(
 
     Ok(None)
 }
+
+pub async fn get_login_status(
+    repo: &(dyn repository::AuthenticationRepository + Send + Sync),
+    sub_id: &str,
+) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error> {
+    let user = repo.find_user_by_sub_id(sub_id).await?;
+    if let Some(user) = user {
+        if user.role == "authenticated" {
+            return Ok(Some(user));
+        }
+    }
+    Ok(None)
+}

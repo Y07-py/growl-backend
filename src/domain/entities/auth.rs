@@ -5,7 +5,7 @@ use crate::domain::interface;
 
 #[derive(Debug, Clone)]
 pub struct AuthenticationSession {
-    user: AuthenticationUser,
+    identity: UserIdentity,
     access_token: String,
     id_token: String,
     refresh_token: Option<String>,
@@ -14,7 +14,7 @@ pub struct AuthenticationSession {
 
 impl AuthenticationSession {
     pub fn new(
-        user: AuthenticationUser,
+        identity: UserIdentity,
         access_token: String,
         id_token: String,
         refresh_token: Option<String>,
@@ -22,7 +22,7 @@ impl AuthenticationSession {
     ) -> Self {
         let expired_at = chrono::Utc::now() + chrono::Duration::seconds(expires_in as i64);
         Self {
-            user,
+            identity,
             access_token,
             id_token,
             refresh_token,
@@ -30,8 +30,8 @@ impl AuthenticationSession {
         }
     }
 
-    pub fn user(&self) -> AuthenticationUser {
-        self.user.clone()
+    pub fn identity(&self) -> UserIdentity {
+        self.identity.clone()
     }
 
     pub fn access_token(&self) -> String {
@@ -56,7 +56,7 @@ impl AuthenticationSession {
 }
 
 #[derive(Debug, Clone)]
-pub struct AuthenticationUser {
+pub struct UserIdentity {
     pub sub_id: String,
     pub email: String,
     pub phone_number: String,
@@ -64,7 +64,7 @@ pub struct AuthenticationUser {
     pub role: String,
 }
 
-impl AuthenticationUser {
+impl UserIdentity {
     pub fn new(
         sub_id: String,
         email: String,

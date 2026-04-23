@@ -1,9 +1,12 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use std::sync::Arc;
 
-use crate::application::auth::sign_up;
+use crate::application::auth::{get_login_status, sign_up};
 use crate::domain::interface::{auth as auth_interface, repository};
-use crate::presentation::dto::auth::{SignUpRequest, SignUpResponse};
+use crate::presentation::dto::auth::{
+    AuthenticationSessionDTO, LoginStatusDTO, LoginStatusResponse, SignUpRequest, SignUpResponse,
+    UserIdentityDTO,
+};
 
 /// Represents the shared application state containing services and repositories.
 pub struct AppState {
@@ -98,5 +101,41 @@ pub async fn post_sign_up(
             )
                 .into_response()
         }
+    }
+}
+
+/// HTTP handler for checking login status.
+/// It uses the provided session identity to verify if the user exists and is authenticated.
+#[axum::debug_handler]
+pub async fn post_login_status(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<AuthenticationSessionDTO>,
+) -> impl IntoResponse {
+    match get_login_status(state.auth_repo.as_ref(), &payload.identity.sub_id).await {
+        Ok(Some(user)) => {
+            let response = LoginStatusResponse {
+                login_status: LoginStatusDTO::Authenticated,
+                identity: Some(UserIdentityDTO {
+                    sub_id: user.sub_id,
+                    email: user.email,
+                    phone_number: user.phone_number,
+                    authentication_method: user.authentication_method,
+                    role: user.role,
+                }),
+            };
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Ok(None) => {
+            let response = LoginStatusResponse {
+                login_status: LoginStatusDTO::Unauthenticated,
+                identity: None,
+            };
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(format!("Failed to check login status: {}", e)),
+        )
+            .into_response(),
     }
 }

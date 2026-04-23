@@ -9,11 +9,11 @@ use crate::infra::repository::postgres;
 impl interface::repository::AuthenticationRepository for postgres::PostgresHandler {
     async fn insert_guest_user(
         &self,
-        guest: &entities::auth::AuthenticationUser,
+        guest: &entities::auth::UserIdentity,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "
-            INSERT INTO authentication_users (sub_id, email, phone_number, authentication_method, role) \
+            INSERT INTO user_identities (sub_id, email, phone_number, authentication_method, role) \
             VALUES ($1, $2, $3, $4, $5) \
             ON CONFLICT (sub_id) DO NOTHING \
             ",
@@ -37,11 +37,11 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
 
     async fn update_authenticated_user(
         &self,
-        user: &entities::auth::AuthenticationUser,
+        user: &entities::auth::UserIdentity,
     ) -> Result<(), sqlx::Error> {
         sqlx::query(
             "
-            UPDATE authentication_users \
+            UPDATE user_identities \
             SET role = $1 \
             WHERE sub_id = $2
             ",
@@ -59,4 +59,39 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
 
         Ok(())
     }
+
+    async fn find_user_by_sub_id(
+        &self,
+        sub_id: &str,
+    ) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error> {
+        let row = sqlx::query_as::<_, UserIdentityRow>(
+            "
+            SELECT sub_id, email, phone_number, authentication_method, role \
+            FROM user_identities \
+            WHERE sub_id = $1
+            ",
+        )
+        .bind(sub_id)
+        .fetch_optional(self.get_pool())
+        .await?;
+
+        Ok(row.map(|r| {
+            entities::auth::UserIdentity::new(
+                r.sub_id,
+                r.email,
+                r.phone_number,
+                r.authentication_method,
+                r.role,
+            )
+        }))
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct UserIdentityRow {
+    sub_id: String,
+    email: String,
+    phone_number: String,
+    authentication_method: String,
+    role: String,
 }
