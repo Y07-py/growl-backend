@@ -4,8 +4,8 @@ use std::sync::Arc;
 use crate::application::auth::{get_login_status, sign_up};
 use crate::domain::interface::{auth as auth_interface, repository};
 use crate::presentation::dto::auth::{
-    AuthenticationSessionDTO, LoginStatusDTO, LoginStatusResponse, SignUpRequest, SignUpResponse,
-    UserIdentityDTO,
+    AuthenticationMethodDTO, AuthenticationSessionDTO, LoginStatusDTO, LoginStatusResponse,
+    SignUpRequest, SignUpResponse, UserIdentityDTO,
 };
 
 /// Represents the shared application state containing services and repositories.
@@ -41,27 +41,27 @@ pub async fn post_sign_up(
     Json(payload): Json<SignUpRequest>,
 ) -> impl IntoResponse {
     // 1. Determine authentication method from payload.
-    let method = if let Some(email) = payload.email {
-        auth_interface::AuthenticationMethod::Email {
-            email,
+    let method = match payload.method {
+        AuthenticationMethodDTO::Email => auth_interface::AuthenticationMethod::Email {
+            email: payload.user_name,
             otp: None,
             session_id: None,
-        }
-    } else if let Some(phone_number) = payload.phone_number {
-        auth_interface::AuthenticationMethod::PhoneNumber {
-            phone_number,
+        },
+        AuthenticationMethodDTO::PhoneNumber => auth_interface::AuthenticationMethod::PhoneNumber {
+            phone_number: payload.user_name,
             otp: None,
             session_id: None,
+        },
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(SignUpResponse::new(
+                    None,
+                    "Email or Phone number is required".to_string(),
+                )),
+            )
+                .into_response();
         }
-    } else {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(SignUpResponse::new(
-                None,
-                "Email or Phone number is required".to_string(),
-            )),
-        )
-            .into_response();
     };
 
     // 2. Select the corresponding OTP service based on the method.

@@ -1,17 +1,23 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AuthenticationMethodDTO {
+    Email,
+    PhoneNumber,
+    Google,
+    Apple,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct SignUpRequest {
-    pub email: Option<String>,
-    pub phone_number: Option<String>,
+    pub user_name: String,
+    pub method: AuthenticationMethodDTO,
 }
 
 impl SignUpRequest {
-    pub fn new(email: Option<String>, phone_number: Option<String>) -> Self {
-        Self {
-            email,
-            phone_number,
-        }
+    pub fn new(user_name: String, method: AuthenticationMethodDTO) -> Self {
+        Self { user_name, method }
     }
 }
 
