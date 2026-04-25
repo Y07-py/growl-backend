@@ -11,6 +11,7 @@ services:
       - AWS_COGNITIO_REGION=${AWS_COGNITIO_REGION}
       - AWS_COGNITIO_USER_POOL_ID=${AWS_COGNITIO_USER_POOL_ID}
       - AWS_COGNITIO_CLIENT_ID=${AWS_COGNITIO_CLIENT_ID}
+      - AWS_COGNITIO_CLIENT_SECRET=${AWS_COGNITIO_CLIENT_SECRET}
       - AWS_SNS_TOPIC_ARN=${AWS_SNS_TOPIC_ARN}
       - APP_NAME=${APP_NAME}
     depends_on:
@@ -30,8 +31,13 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-growl}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-growl}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -21,7 +21,7 @@ impl PostgresHandler {
             .await
         {
             Ok(pool) => {
-                slog::info!(sub_logger, "Successfully connected to the database."; "endpoint" => &db_endpoint);
+                slog::info!(sub_logger, "Successfully connected to the database.");
                 Arc::new(Self { pool, sub_logger })
             }
             Err(e) => {

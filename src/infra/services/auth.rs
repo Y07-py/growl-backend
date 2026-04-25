@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use aws_sdk_cognitoidentityprovider as cognitio;
+use base64::Engine;
 use cognitio::error::SdkError;
 use cognitio::types::{AttributeType, AuthFlowType, ChallengeNameType, MessageActionType};
+use hmac::{self, KeyInit, Mac};
 use jsonwebtoken;
 use reqwest;
+use sha2;
 
 use crate::domain::entities::auth::{AuthenticationClaims, AuthenticationSession, UserIdentity};
 use crate::domain::interface::auth::{
@@ -16,6 +19,7 @@ use crate::domain::values::auth::JwkSet;
 pub struct CognitoAuthenticationService {
     client: cognitio::Client,
     client_id: String,
+    client_secret: String,
     region: String,
     pool_id: String,
     logger: slog::Logger,
@@ -30,6 +34,8 @@ impl CognitoAuthenticationService {
 
         let client_id =
             std::env::var("AWS_COGNITIO_CLIENT_ID").expect("AWS_COGNITIO_CLIENT_ID must be set");
+        let client_secret = std::env::var("AWS_COGNITIO_CLIENT_SECRET")
+            .expect("AWS_COGNITIO_CLIENT_SECRET must be set");
         let region = std::env::var("AWS_COGNITIO_REGION").expect("AWS_COGNITIO_REGION must be set");
         let pool_id = std::env::var("AWS_COGNITIO_USER_POOL_ID")
             .expect("AWS_COGNITIO_USER_POOL_ID must be set");
@@ -39,6 +45,7 @@ impl CognitoAuthenticationService {
         Arc::new(Self {
             client,
             client_id,
+            client_secret,
             region,
             pool_id,
             logger: sub_logger,
@@ -47,6 +54,14 @@ impl CognitoAuthenticationService {
 
     pub fn logger(&self) -> &slog::Logger {
         &self.logger
+    }
+
+    pub fn client_secret(&self) -> String {
+        self.client_secret.clone()
+    }
+
+    pub fn client_id(&self) -> String {
+        self.client_id.clone()
     }
 
     fn map_error<E>(&self, err: SdkError<E>) -> AuthenticationError
@@ -140,15 +155,15 @@ impl CognitoAuthenticationService {
         &self,
         username: &str,
     ) -> Result<AuthenticationResponse, AuthenticationError> {
-        let output = self
+        let request = self
             .client
             .initiate_auth()
             .auth_flow(AuthFlowType::CustomAuth)
             .client_id(&self.client_id)
             .auth_parameters("USERNAME", username)
-            .send()
-            .await
-            .map_err(|e| self.map_error(e))?;
+            .auth_parameters("SECRET_HASH", self.compute_secret_hash(username));
+
+        let output = request.send().await.map_err(|e| self.map_error(e))?;
 
         Ok(AuthenticationResponse::OtpSent {
             session: output.session.unwrap_or_default(),
@@ -170,6 +185,7 @@ impl CognitoAuthenticationService {
             .client_id(&self.client_id)
             .challenge_responses("USERNAME", username)
             .challenge_responses("ANSWER", code)
+            .challenge_responses("SECRET_HASH", self.compute_secret_hash(username))
             .set_session(session_id.map(|s| s.to_string()))
             .send()
             .await
@@ -278,6 +294,22 @@ impl CognitoAuthenticationService {
             "guest".into(),
         ))
     }
+
+    fn compute_secret_hash(&self, user_name: &str) -> String {
+        type Hmac256 = hmac::Hmac<sha2::Sha256>;
+        let mut mac = Hmac256::new_from_slice(self.client_secret().as_bytes())
+            .expect("HMAC can take key of any size");
+
+        // Injection client id and user_name
+        mac.update(user_name.as_bytes());
+        mac.update(self.client_id().as_bytes());
+
+        // Compute with sha256
+        let result = mac.finalize();
+        let code_bytes = result.into_bytes();
+
+        base64::engine::general_purpose::STANDARD.encode(code_bytes)
+    }
 }
 
 #[async_trait]
@@ -364,6 +396,10 @@ impl AuthenticationService for CognitoAuthenticationService {
             .auth_flow(AuthFlowType::RefreshTokenAuth)
             .client_id(&self.client_id)
             .auth_parameters("REFRESH_TOKEN", refresh_token)
+            .auth_parameters(
+                "SECRET_HASH",
+                self.compute_secret_hash(&session.identity().sub_id),
+            )
             .send()
             .await
             .map_err(|e| self.map_error(e))?;

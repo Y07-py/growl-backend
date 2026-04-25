@@ -70,6 +70,5 @@ pub trait AuthenticationService: Send + Sync {
 
 #[async_trait]
 pub trait OTPService: Send + Sync {
-    async fn request_otp(&self, user_name: &str) -> Result<(), AuthenticationError>;
     fn validation_user_name(&self, user_name: &str) -> Result<(), AuthenticationError>;
 }

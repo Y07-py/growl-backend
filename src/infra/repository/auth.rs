@@ -29,7 +29,7 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
         let sub_logger = self.get_sub_logger();
         slog::info!(
             sub_logger,
-            "successfully to insert guest user into authenticated_users."
+            "successfully to insert guest user into user_identities."
         );
 
         Ok(())

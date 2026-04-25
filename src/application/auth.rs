@@ -7,7 +7,8 @@ pub async fn sign_up(
     repo: &(dyn repository::AuthenticationRepository + Send + Sync),
     otp_service: &(dyn auth::OTPService + Send + Sync),
     method: &auth::AuthenticationMethod,
-) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error + Send + Sync>> {
+) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error + Send + Sync>>
+{
     // 1. sign up with guest user.
     let guest = auth_service.sign_up(method).await?;
 
@@ -27,9 +28,6 @@ pub async fn sign_up(
                 _ => None,
             };
 
-            // Request otp to aws sms.
-            otp_service.request_otp(email).await?;
-
             session_id
         }
         auth::AuthenticationMethod::PhoneNumber { phone_number, .. } => {
@@ -42,9 +40,6 @@ pub async fn sign_up(
                 auth::AuthenticationResponse::OtpSent { session } => Some(session),
                 _ => None,
             };
-
-            // Request otp to aws sns.
-            otp_service.request_otp(phone_number).await?;
 
             session_id
         }
