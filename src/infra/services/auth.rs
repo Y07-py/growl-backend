@@ -253,13 +253,16 @@ impl CognitoAuthenticationService {
             .build()
             .unwrap();
 
+        let mut attributes = Vec::new();
+        attributes.push(user_attr);
+        attributes.push(verified_attr);
+
         let output = self
             .client
             .admin_create_user()
             .user_pool_id(&self.pool_id)
             .username(username)
-            .user_attributes(user_attr)
-            .user_attributes(verified_attr)
+            .set_user_attributes(Some(attributes))
             .message_action(MessageActionType::Suppress)
             .send()
             .await
