@@ -7,7 +7,7 @@ pub mod domain;
 pub mod infra;
 pub mod presentation;
 
-use crate::infra::repository::postgres::PostgresHandler;
+use crate::infra::postgres::handler::PostgresHandler;
 use crate::infra::services::{
     auth::CognitoAuthenticationService, ses::SESService, sns::SNSService,
 };

@@ -1,4 +1,4 @@
-pub mod repository;
+pub mod postgres;
 pub mod services;
 pub mod utils;
 

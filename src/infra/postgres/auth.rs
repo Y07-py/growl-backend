@@ -3,10 +3,11 @@ use slog;
 use sqlx;
 
 use crate::domain::{entities, interface};
-use crate::infra::repository::postgres;
+use crate::infra::postgres::dto;
+use crate::infra::postgres::handler;
 
 #[async_trait]
-impl interface::repository::AuthenticationRepository for postgres::PostgresHandler {
+impl interface::repository::AuthenticationRepository for handler::PostgresHandler {
     async fn insert_guest_user(
         &self,
         guest: &entities::auth::UserIdentity,
@@ -64,7 +65,7 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
         &self,
         sub_id: &str,
     ) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error> {
-        let row = sqlx::query_as::<_, UserIdentityRow>(
+        let row = sqlx::query_as::<_, dto::UserIdentityRow>(
             "
             SELECT sub_id, email, phone_number, authentication_method, role \
             FROM user_identities \
@@ -77,21 +78,55 @@ impl interface::repository::AuthenticationRepository for postgres::PostgresHandl
 
         Ok(row.map(|r| {
             entities::auth::UserIdentity::new(
-                r.sub_id,
-                r.email,
-                r.phone_number,
-                r.authentication_method,
-                r.role,
+                r.sub_id(),
+                r.email(),
+                r.phone_number(),
+                r.authentication_method(),
+                r.role(),
             )
         }))
     }
-}
 
-#[derive(sqlx::FromRow)]
-struct UserIdentityRow {
-    sub_id: String,
-    email: String,
-    phone_number: String,
-    authentication_method: String,
-    role: String,
+    async fn find_user_by_username(
+        &self,
+        method: &interface::auth::AuthenticationMethod,
+    ) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error> {
+        let row = match method {
+            interface::auth::AuthenticationMethod::Email { email, .. } => {
+                sqlx::query_as::<_, dto::UserIdentityRow>(
+                    "
+                    SELECT sub_id, email, phone_number, authentication_method, role \
+                    FROM user_identities \
+                    WHERE email = $1
+                    ",
+                )
+                .bind(email)
+                .fetch_optional(self.get_pool())
+                .await?
+            }
+            interface::auth::AuthenticationMethod::PhoneNumber { phone_number, .. } => {
+                sqlx::query_as::<_, dto::UserIdentityRow>(
+                    "
+                    SELECT sub_id, email, phone_number, authentication_method, role \
+                    FROM user_identities \
+                    WHERE phone_number = $1
+                    ",
+                )
+                .bind(phone_number)
+                .fetch_optional(self.get_pool())
+                .await?
+            }
+            _ => None,
+        };
+
+        Ok(row.map(|r| {
+            entities::auth::UserIdentity::new(
+                r.sub_id(),
+                r.email(),
+                r.phone_number(),
+                r.authentication_method(),
+                r.role(),
+            )
+        }))
+    }
 }

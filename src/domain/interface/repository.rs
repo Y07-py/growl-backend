@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use sqlx;
 
 use crate::domain::entities;
+use crate::domain::interface;
 
 #[async_trait]
 pub trait AuthenticationRepository: Send + Sync {
@@ -18,5 +19,10 @@ pub trait AuthenticationRepository: Send + Sync {
     async fn find_user_by_sub_id(
         &self,
         sub_id: &str,
+    ) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error>;
+
+    async fn find_user_by_username(
+        &self,
+        auth_method: &interface::auth::AuthenticationMethod,
     ) -> Result<Option<entities::auth::UserIdentity>, sqlx::Error>;
 }

@@ -58,10 +58,12 @@ pub trait AuthenticationService: Send + Sync {
         &self,
         method: &AuthenticationMethod,
     ) -> Result<AuthenticationResponse, AuthenticationError>;
+
     async fn sign_up(
         &self,
         method: &AuthenticationMethod,
     ) -> Result<UserIdentity, AuthenticationError>;
+
     async fn refresh_token(
         &self,
         session: &AuthenticationSession,

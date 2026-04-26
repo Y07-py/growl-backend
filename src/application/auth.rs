@@ -1,7 +1,9 @@
 use crate::domain::entities;
 use crate::domain::interface::{auth, repository};
 
-///
+/// Handles the sign-up process for a new user or a guest user.
+/// If the user does not exist, it registers them as a guest user in the database
+/// and initiates an OTP (One-Time Password) challenge based on the provided authentication method.
 pub async fn sign_up(
     auth_service: &(dyn auth::AuthenticationService + Send + Sync),
     repo: &(dyn repository::AuthenticationRepository + Send + Sync),
@@ -9,11 +11,13 @@ pub async fn sign_up(
     method: &auth::AuthenticationMethod,
 ) -> Result<Option<entities::auth::AuthenticationChallenge>, Box<dyn std::error::Error + Send + Sync>>
 {
-    // 1. sign up with guest user.
-    let guest = auth_service.sign_up(method).await?;
+    if !already_exist_user(method, repo).await? {
+        // 1. sign up with guest user.
+        let guest = auth_service.sign_up(method).await?;
 
-    // 2. insert guest user in DB, if not exist.
-    repo.insert_guest_user(&guest).await?;
+        // 2. insert guest user in DB, if not exist.
+        repo.insert_guest_user(&guest).await?;
+    }
 
     // 3.Request transimission OTP based on the method.
     let session_id: Option<String> = match method {
@@ -54,6 +58,18 @@ pub async fn sign_up(
     Ok(None)
 }
 
+/// Checks if a user already exists in the system based on the provided authentication method
+/// (e.g., email or phone number).
+async fn already_exist_user(
+    method: &auth::AuthenticationMethod,
+    repo: &(dyn repository::AuthenticationRepository + Send + Sync),
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    let identity = repo.find_user_by_username(method).await?;
+    Ok(identity.is_some())
+}
+
+/// Retrieves the login status and identity information for a user with a specific sub_id.
+/// Returns the user identity only if the user has an 'authenticated' role.
 pub async fn get_login_status(
     repo: &(dyn repository::AuthenticationRepository + Send + Sync),
     sub_id: &str,
