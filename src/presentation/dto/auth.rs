@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthenticationMethodDTO {
     Email,
@@ -9,40 +9,31 @@ pub enum AuthenticationMethodDTO {
     Apple,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct SignUpRequest {
-    pub user_name: String,
-    pub method: AuthenticationMethodDTO,
-}
-
-impl SignUpRequest {
-    pub fn new(user_name: String, method: AuthenticationMethodDTO) -> Self {
-        Self { user_name, method }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct SignUpResponse {
-    pub session_id: Option<String>,
-    pub message: String,
-}
-
-impl SignUpResponse {
-    pub fn new(session_id: Option<String>, message: String) -> Self {
-        Self {
-            session_id,
-            message,
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserIdentityDTO {
     pub sub_id: String,
     pub email: String,
     pub phone_number: String,
     pub authentication_method: String,
     pub role: String,
+}
+
+impl UserIdentityDTO {
+    pub fn new(
+        sub_id: &str,
+        email: &str,
+        phone_number: &str,
+        authentication_method: &str,
+        role: &str,
+    ) -> Self {
+        Self {
+            sub_id: sub_id.to_string(),
+            email: email.to_string(),
+            phone_number: phone_number.to_string(),
+            authentication_method: authentication_method.to_string(),
+            role: role.to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,6 +43,24 @@ pub struct AuthenticationSessionDTO {
     pub id_token: String,
     pub refresh_token: Option<String>,
     pub expired_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl AuthenticationSessionDTO {
+    pub fn new(
+        identity: &UserIdentityDTO,
+        access_token: &str,
+        id_token: &str,
+        refresh_token: &Option<String>,
+        expires_at: &chrono::DateTime<chrono::Utc>,
+    ) -> Self {
+        Self {
+            identity: identity.clone(),
+            access_token: access_token.to_string(),
+            id_token: id_token.to_string(),
+            refresh_token: refresh_token.clone(),
+            expired_at: expires_at.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]

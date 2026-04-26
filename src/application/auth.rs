@@ -14,7 +14,6 @@ pub async fn sign_up(
     if !already_exist_user(method, repo).await? {
         // 1. sign up with guest user.
         let guest = auth_service.sign_up(method).await?;
-
         // 2. insert guest user in DB, if not exist.
         repo.insert_guest_user(&guest).await?;
     }
@@ -24,7 +23,6 @@ pub async fn sign_up(
         auth::AuthenticationMethod::Email { email, .. } => {
             // Validation email format.
             otp_service.validation_user_name(email)?;
-
             // Generate session id via sign in.
             let response = auth_service.sign_in(method).await?;
             let session_id: Option<String> = match response {
@@ -37,7 +35,6 @@ pub async fn sign_up(
         auth::AuthenticationMethod::PhoneNumber { phone_number, .. } => {
             // Validation phone number format.
             otp_service.validation_user_name(phone_number)?;
-
             // Generate session id via sign in.
             let response = auth_service.sign_in(method).await?;
             let session_id: Option<String> = match response {
@@ -56,6 +53,37 @@ pub async fn sign_up(
     }
 
     Ok(None)
+}
+
+/// Performs the sign-in process by verifying the authentication method.
+/// For email and phone number methods, it expects an OTP and session ID.
+/// If authentication is successful, it returns an AuthenticationSession.
+pub async fn sign_in(
+    auth_service: &(dyn auth::AuthenticationService + Send + Sync),
+    method: &auth::AuthenticationMethod,
+) -> Result<Option<entities::auth::AuthenticationSession>, Box<dyn std::error::Error + Send + Sync>>
+{
+    // Validation method.
+    match method {
+        auth::AuthenticationMethod::Email {
+            otp, session_id, ..
+        }
+        | auth::AuthenticationMethod::PhoneNumber {
+            otp, session_id, ..
+        } => {
+            if otp.is_none() || session_id.is_none() {
+                return Ok(None);
+            }
+        }
+        _ => {}
+    }
+
+    let response = auth_service.sign_in(method).await?;
+
+    match response {
+        auth::AuthenticationResponse::Authenticated(session) => Ok(Some(session)),
+        _ => Ok(None),
+    }
 }
 
 /// Checks if a user already exists in the system based on the provided authentication method

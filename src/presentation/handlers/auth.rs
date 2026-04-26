@@ -1,12 +1,14 @@
 use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use std::sync::Arc;
 
-use crate::application::auth::{get_login_status, sign_up};
+use crate::application::auth::{get_login_status, sign_in, sign_up};
 use crate::domain::interface::{auth as auth_interface, repository};
 use crate::presentation::dto::auth::{
     AuthenticationMethodDTO, AuthenticationSessionDTO, LoginStatusDTO, LoginStatusResponse,
-    SignUpRequest, SignUpResponse, UserIdentityDTO,
+    UserIdentityDTO,
 };
+use crate::presentation::dto::request::{SignUpRequest, VerificationCodeRequest};
+use crate::presentation::dto::response::{SignUpResponse, VerificationCodeResponse};
 
 /// Represents the shared application state containing services and repositories.
 pub struct AppState {
@@ -101,6 +103,62 @@ pub async fn post_sign_up(
             )
                 .into_response()
         }
+    }
+}
+
+/// HTTP handler for verifying the OTP (One-Time Password) code.
+/// It receives the verification details, performs the sign-in logic via the application layer,
+/// and returns the authentication session if successful.
+#[axum::debug_handler]
+pub async fn post_verification_code(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<VerificationCodeRequest>,
+) -> impl IntoResponse {
+    // 1. Determine authentication method from payload, including OTP and session ID.
+    let method = match payload.method() {
+        AuthenticationMethodDTO::Email => auth_interface::AuthenticationMethod::Email {
+            email: payload.user_name(),
+            otp: Some(payload.otp()),
+            session_id: Some(payload.session_id()),
+        },
+        AuthenticationMethodDTO::PhoneNumber => auth_interface::AuthenticationMethod::PhoneNumber {
+            phone_number: payload.user_name(),
+            otp: Some(payload.otp()),
+            session_id: Some(payload.session_id()),
+        },
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(SignUpResponse::new(
+                    None,
+                    "Email or Phone number is required".to_string(),
+                )),
+            )
+                .into_response();
+        }
+    };
+
+    // 2. Call the sign_in use case from the application layer.
+    match sign_in(state.auth_service.as_ref(), &method).await {
+        Ok(Some(session)) => {
+            (StatusCode::OK, Json(VerificationCodeResponse::new(session))).into_response()
+        }
+        Ok(None) => (
+            StatusCode::UNAUTHORIZED,
+            Json(SignUpResponse::new(
+                None,
+                "Invalid verification code or session expired".to_string(),
+            )),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(SignUpResponse::new(
+                None,
+                format!("Verification failed: {}", e),
+            )),
+        )
+            .into_response(),
     }
 }
 
